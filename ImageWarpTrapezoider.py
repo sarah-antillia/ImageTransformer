@@ -67,7 +67,7 @@ class ImageWarpTrapezoider:
         h, w, _ = image.shape
       elif type == self.JPG:
         image   = cv2.imread(input_file, cv2.IMREAD_COLOR)
-        h, w,   = image.shape
+        h, w, _ = image.shape
       rectangle = [(0, 0), (w, 0),(w, h), (0, h)]
 
       trapezoids  = [] 

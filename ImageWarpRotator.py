@@ -77,7 +77,7 @@ class ImageWarpRotator:
       h, w, _ = image.shape
     elif type == self.JPG:
       image   = cv2.imread(imagefile, cv2.IMREAD_COLOR)
-      h, w,   = image.shape
+      h, w, _ = image.shape
 
     (cX, cY) = (w // 2, h // 2)
     MATRIX = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
