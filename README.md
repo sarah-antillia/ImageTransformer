@@ -121,7 +121,6 @@ python ImageWarpTrapezoider.py ./trapezoider.conf train
 <a href="sample_images_medium_train_trapezoided">Trapezoided</a>
 <br>
 <br>
-<img src="./asset/trapezoided.p
-ng"  width="720" height="auto"><br>
+<img src="./asset/trapezoided.png" width="720" height="auto"><br>
 
 
