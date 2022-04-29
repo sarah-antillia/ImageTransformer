@@ -34,7 +34,8 @@ color_params  = [0.86,  0.94, 1.06,  1.14, ]
 <br>
 Example<br>
 <pre>
-python ImageColorEnhancer.py ./sample_images_medium colorenhancer.conf train<pre>
+python ImageColorEnhancer.py ./sample_images_medium colorenhancer.conf train
+</pre>
 <br>
 <a href="./sample_images_medium_train_colorenhanced">Color Enhanced</a>
 <br>
@@ -70,7 +71,6 @@ angles  = [ -1, 1,]
 Example<br>
 <pre>
 python ImageWarpRotator.py ./rotator.conf train
-
 </pre>
 <br>
 <a href="./sample_images_medium_train_rotated">Rotated</a>
