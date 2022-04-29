@@ -18,22 +18,65 @@
 # ImageWarpTrapezoider.py
 # This is a very simple, primitive trapezoider to convert a rectangle area of an image to a trapezoid.
 #
+# 2022/04/29 Modified to be able to use TZ POLICY(TZ_BY_PIXEL, TZ_BY_RATIO)
 
 import os
 import sys
 import uuid
 import glob
+import shutil
+#from xml.etree.ElementInclude import DEFAULT_MAX_INCLUSION_DEPTH
 import numpy as np
 import cv2
 import traceback
+from ConfigParser import ConfigParser
+
+#TZ_POLICY
+TZ_BY_PIXEL = 1
+TZ_BY_RATIO = 2
+
+class TrapeZoider:
+  def __init__(self, hs_list, ws_list, policy=TZ_BY_PIXEL):
+    self.hs_list  = hs_list
+    self.ws_list  = ws_list
+    self.policy   = policy
+
+  def to_pixel_shift(self, h, flist):
+    pix_list = []
+    for f in flist:
+      s = float(h)*f
+      pix_list.append(int(s))
+    return pix_list
+
+
+  def generate_from(self, rectangle):
+    
+    # rectangle may take a list something like [0, 0, w, h]
+    trapezoids  = []   
+    x, y, w, h = rectangle
+
+    if self.policy == TZ_BY_RATIO:
+      self.hs_list = self.to_pixel_shift(h, self.hs_list)
+      self.ws_list = self.to_pixel_shift(w, self.ws_list)
+    else:
+      pass
+      #OK. Do nothing
+
+    for hs in self.hs_list:
+      for ws in self.ws_list:
+        trapezoid1 = [(x,  hs), (w,    y ), (w-ws, h   ),  (x+ws, h-hs)]
+        trapezoid2 = [(ws, y ), (w-ws, hs), (w,    h-hs),  (x,    h   )]
+        trapezoids.append(trapezoid1)
+        trapezoids.append(trapezoid2)
+
+    return trapezoids
+
 
 class ImageWarpTrapezoider:
 
-  def __init__(self, use_uuid=True, base_index=10000):
+  def __init__(self):
     self.PNG = ".png"
     self.JPG = ".jpg"
-    self.use_uuid   = use_uuid
-    self.BASE_INDEX = base_index
 
   def getImageFiles(self, input_dir):
     #
@@ -45,10 +88,10 @@ class ImageWarpTrapezoider:
       return (input_files, self.JPG)
 
 
-  def trapezoid(self, input_dir, output_dir, ws_list, hs_list):
-    if ws_list == None or len(ws_list)==0:
+  def generate(self, input_dir, output_dir, ws_list, hs_list, policy=TZ_BY_PIXEL):
+    if ws_list == None:
       raise Exception("Invalid ws_list")
-    if hs_list == None or len(hs_list)==0:
+    if hs_list == None:
       raise Exception("Invalid hs_list")
 
     #
@@ -67,36 +110,31 @@ class ImageWarpTrapezoider:
         h, w, _ = image.shape
       elif type == self.JPG:
         image   = cv2.imread(input_file, cv2.IMREAD_COLOR)
-        h, w, _ = image.shape
+        h, w,   = image.shape
       rectangle = [(0, 0), (w, 0),(w, h), (0, h)]
 
-      trapezoids  = [] 
-      for hs in hs_list:
-        for ws in ws_list:
-          trapezoid1 = [(0,    hs*2), (w,      0), (w-ws*2, h), (0+ws*2,h-hs*2)]
-          trapezoid2 = [(ws*2, 0), (w-2*ws, hs*2), (w,      h-hs*2), (0,     h)]
-          trapezoids.append(trapezoid1)
-          trapezoids.append(trapezoid2)
+      trapezoider = TrapeZoider(ws_list, hs_list, policy)
+      rect  = [0, 0, w, h]
+      trapezoids = trapezoider.generate_from(rect)
+
       print("---- len trapezoids {}".format(len(trapezoids)))
       for i,trapezoid in enumerate(trapezoids):
-        warped   = self.trapezoid_one(image, rectangle, trapezoid)
+        warped   = self.generate_one(image, rectangle, trapezoid)
         basename = os.path.basename(input_file)
         name     = basename
         pos      = basename.find(type)
         if pos>0:
           name = basename[0:pos]
 
-        id = str(self.BASE_INDEX + n + i)
-        if self.use_uuid:
-          id = str(uuid.uuid4())
+        id = str(uuid.uuid4())
         output_filepath = os.path.join(output_dir, name + "___" + id + type)
 
         cv2.imwrite(output_filepath, warped)
         print("=== saved {}".format(output_filepath)) 
         
 
-  def trapezoid_one(self, image, rectangle, trapezoid):
-    rectangle   =  np.float32(rectangle)
+  def generate_one(self, image, rectangle, trapezoid):
+    rectangle =  np.float32(rectangle)
 
     W_MAX     = max(trapezoid, key = lambda x:x[0])[0]
     H_MAX     = max(trapezoid, key = lambda x:x[1])[1]
@@ -107,60 +145,59 @@ class ImageWarpTrapezoider:
     return warped
 
 
-# python ImageWarpTrapezoider.py input_dir mode output_dir
-# 
-# python ImageWarpTrapezoider.py ./sample_images train ./sample_images_train_trapezoided
+# python ImageWarpTrapezoider.py trapezoider.conf  all/train/valid/test
 
 if __name__ == "__main__":
   input_file = ""
   input_dir  = ""
-  mode       = "train"
-  train      = False
-  test       = False
+  target     = "train"
+  policy     = TZ_BY_PIXEL  # 1
+  config_ini = ""
   try:
-    if len(sys.argv) == 4:
-      input_dir  = sys.argv[1]
-      mode       = sys.argv[2]
-      output_dir = sys.argv[3]
+    if len(sys.argv) == 3:
+      config_ini = sys.argv[1]
+      target     = sys.argv[2]
     else:
-      raise Exception("Usage:python ImageWarper.py input_dir mode output_dir")
-    if mode not in ["train","valid", "test"]:
-      raise Exception("Invalid parameter: mode should be train or valid ")
-    if mode == "train":
-      train = True
-    elif mode == "test":
-      test  = True
-    if not os.path.exists(input_dir):
-      msg = "Not found input_dir:" + input_dir
+      raise Exception("Usage:python ImageWarper.py config.ini")
+    
+    if target not in ["all", "train","valid", "test"]:
+      raise Exception("Invalid parameter: target should be train or valid ")
+
+    if not os.path.exists(config_ini):
+      msg = "Not found config_ini:" + config_ini
       raise Exception(msg)
 
-    if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+    parser     = ConfigParser(config_ini)
+    dataset = []
+    if target == "train" or target == "valid" or target == "test":
+      dataset = [target]
+    elif target == "all":
+      dataset = ["train", "valid", "test"] #all
+ 
+    for target in dataset:
+      input_dir  = parser.get(target,     "input_dir")
+      output_dir = parser.get(target,     "output_dir") 
+      policy     = int(parser.get(target, "policy"))
 
-    #train==False
-    #Shifting pixels in width and heigt to make a trapezoid from a rectangle
-    #default valid
-    ws_list = [0,2,4]
-    hs_list = [0,2,4]
-    index = 10000
-    if train ==True:
-      #ws_list = [0,1,2,3,5]
-      #hs_list = [0,1,2,3,5]
-      ws_list = [0,1,2,3,4]
-      hs_list = [0,1,2,3,4]
-      ws_list = [0,1,2,3]
-      hs_list = [0,1,2,3]
+      ws_list    = parser.get(target,     "ws_list")
+      hs_list    = parser.get(target,     "hs_list") 
 
-      index = 20000
-    if test  == True:
-      index   = 30000
-      ws_hist = []
-      hs_list = [0,2]
+      if not os.path.exists(input_dir):
+        msg = "Not found input_dir:" + input_dir
+        raise Exception(msg)
 
-    trapezoider = ImageWarpTrapezoider(use_uuid=True, base_index=index)
+      if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+      if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+      
+      trapezoider = ImageWarpTrapezoider()
 
-    trapezoider.trapezoid(input_dir, output_dir, ws_list, hs_list)
+      print("-----policy  {}".format(policy))
+      print("-----ws_list {}".format(ws_list))
+      print("-----hs_list {}".format(hs_list))
+
+      trapezoider.generate(input_dir, output_dir, ws_list, hs_list, policy=policy)
         
-
   except:
     traceback.print_exc()

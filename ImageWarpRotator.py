@@ -18,20 +18,20 @@
 import os
 import sys
 import uuid
+import shutil
 import cv2
 import glob
 import traceback
 import numpy as np
 from PIL import Image, ImageDraw
+from ConfigParser import ConfigParser
 
 class ImageWarpRotator:
 
-  def __init__(self, use_uuid=True, base_index=30000):
+  def __init__(self):
     self.PNG = ".png"
     self.JPG = ".jpg"
-    self.use_uuid   = use_uuid
-    self.BASE_INDEX = base_index
-
+ 
   def getImageFiles(self, input_dir):
     #
     input_files = glob.glob(input_dir + "./*" + self.PNG)
@@ -53,14 +53,8 @@ class ImageWarpRotator:
       name  = fname
       if (pos>0):
           name = fname[0:pos]
-      for i, angle in enumerate(angles):
-        print("--- i {}".format(i))
-        n = index + i 
-
-
-        id = str(self.BASE_INDEX + n + i)
-        if self.use_uuid:
-          id = str(uuid.uuid4())
+      for angle in angles:
+        id = str(uuid.uuid4())
         output_filepath = os.path.join(output_dir, name + "___" + id + type)
         transformed = self.rotate_one(file, type, angle)
 
@@ -77,7 +71,7 @@ class ImageWarpRotator:
       h, w, _ = image.shape
     elif type == self.JPG:
       image   = cv2.imread(imagefile, cv2.IMREAD_COLOR)
-      h, w, _ = image.shape
+      h, w,   = image.shape
 
     (cX, cY) = (w // 2, h // 2)
     MATRIX = cv2.getRotationMatrix2D((cX, cY), -angle, 1.0)
@@ -93,45 +87,51 @@ class ImageWarpRotator:
     transformed = cv2.warpAffine(image, MATRIX, (nW, nH))
     return transformed
 
- 
-# python ImageWarpRotator.py input_dir mode output_dir
-
-# python ImageWarpRotator.py ./sample_images train ./sample_images_train_rotated
+# python ImageWarpRotator.py ./rotator.conf all/train/valid/test 
 
 if __name__ == "__main__":
-
-  train = False
-
+  input_file = ""
+  input_dir  = ""
+  target     = "train"
+  config_ini = ""
   try:
-    train = False
+    if len(sys.argv) == 3:
+      config_ini = sys.argv[1]
+      target     = sys.argv[2]
+    else:
+      raise Exception("Usage:python ImageWarpRotator.py config.ini")
+    
+    if target not in ["all", "train","valid", "test"]:
+      raise Exception("Invalid parameter: target should be train or valid ")
 
-    if len(sys.argv) == 4:
-      input_dir  = sys.argv[1]
-      mode       = sys.argv[2]
-      output_dir = sys.argv[3]
+    if not os.path.exists(config_ini):
+      msg = "Not found config_ini:" + config_ini
+      raise Exception(msg)
+
+    parser     = ConfigParser(config_ini)
+    dataset = []
+    if target == "train" or target == "valid" or target == "test":
+      dataset = [target]
+    elif target == "all":
+      dataset = ["train", "valid", "test"] #all
+ 
+    for target in dataset:
+      input_dir  = parser.get(target, "input_dir")
+      output_dir = parser.get(target, "output_dir") 
+      angles     = parser.get(target, "angles") 
+      
       if not os.path.exists(input_dir):
-        msg = "Not found input_dir " + input_dir
-        raise Exception(msg) 
+        msg = "Not found input_dir:" + input_dir
+        raise Exception(msg)
+
+      if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
       if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-       
-      if mode=="train":
-        train= True
-      if mode not in ["train", "valid"]:
-        raise Exception("Invalid argument " + mode)
+      
+      rotator = ImageWarpRotator()
 
-    angles = []
-    index   = 0
-    if train :
-      index = 70000
-      angles = [-4, -3, -2, -1, 1, 2, 3, 4] 
-    else:
-      index = 80000
-      angles  = [-2, -1, 0, 1, 2, ] 
-
-    rotator = ImageWarpRotator(use_uuid=True, base_index=index)
-    
-    rotator.rotate(input_dir, angles, output_dir)
+      rotator.rotate(input_dir, angles, output_dir)
 
   except:
     traceback.print_exc()
