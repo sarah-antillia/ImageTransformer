@@ -1,7 +1,14 @@
-<h1> ImageTransformer (Updated: 2022/04/30)</h1>
+<h1> ImageTransformer (Updated: 2022/05/12)</h1>
 This is a set of simple ImageTranformers.<br> 
-The sample images have been taken from <a href="https://en.wikipedia.org/wiki/Road_signs_in_the_United_States">Road signs in the United States</a><br>
-<h2>1 ImageColorEnhancer</h2>
+The sample images have been taken from 
+<a href="https://en.wikipedia.org/wiki/Road_signs_in_Japan">Road_signs_in_Japan</a><br>
+<br>
+<a href="#1">1 ImageColorEnhancer</a><br>
+<a href="#2">2 ImageWarpRotator</a><br>
+<a href="#3">3 ImageWarpTrapezoider</a><br>
+<a href="#4">4 ImageWarpParallelogramer</a><br>
+<br>
+<h2><a name="1">1 ImageColorEnhancer</a></h2>
 
 Usage:<br>
 
@@ -42,7 +49,7 @@ python ImageColorEnhancer.py ./sample_images_medium colorenhancer.conf train
 <br>
 <img src="./asset/color_enhanced.png" width="720" height="auto"><br>
 
-<h2>2 ImageWarpRotator</h2>
+<h2><a name="2">2 ImageWarpRotator</a></h2>
 
 Usage:<br>
 python <a href="./ImageWarpRotator.py">ImageWarpRotator.py</a> rotator.conf all/train/valid/test<br>
@@ -79,7 +86,7 @@ python ImageWarpRotator.py ./rotator.conf train
 <img src="./asset/rotated.png"  width="720" height="auto"><br>
 
 
-<h2>3 ImageWarpTrapezoider</h2>
+<h2><a name="3">3 ImageWarpTrapezoider</a></h2>
 
 Usage:<br>
 python <a href="./ImageWarpTrapezoider.py">ImageWarpTrapezoider.py</a> trapezoider.conf all/train/valid/test<br>
@@ -112,15 +119,50 @@ ws_list    = [0.01]
 hs_list    = [0.03]
 
 </pre>
-<br>
 Example<br>
 <pre>
-python ImageWarpTrapezoider.py ./trapezoider.conf train
+python ImageWarpTrapezoider.py ./trapezoider.conf train 
 </pre>
 <br>
 <a href="sample_images_medium_train_trapezoided">Trapezoided</a>
 <br>
 <br>
 <img src="./asset/trapezoided.png" width="720" height="auto"><br>
+
+<br>
+<br><h2><a name="4">4 ImageWarpParallelogramer</a></h2>
+
+Usage:<br>
+python <a href="./ImageWarpParallelogramer.py">ImageWarpParallelogramer.py</a> parallelogramer.conf all/train/valid/test<br>
+<br>
+parallelogramer.conf
+<pre>
+;parallelogramer.conf
+
+[train]
+input_dir   = "./sample_images_medium"
+output_dir  = "./sample_images_medium_train_parallelogramed"
+ws_list     = [-0.05, -0.03, 0.02, 0.02, 0.03, 0.05]
+
+[valid]
+input_dir  = "./sample_images_medium"
+output_dir = "./sample_images_medium_valid_parallelogramed"
+ws_list    = [-0.06, -0.04, 0.04, 0.06]
+
+[test]
+input_dir  = "./sample_images_medium"
+output_dir = "./sample_images_medium_test_parallelogramed"
+ws_list    = [-0.01, 0.01]
+</pre>
+Example<br>
+<pre>
+python ImageWarpParallelogramer.py ./parallelogramer.conf train
+</pre>
+<br>
+<a href="sample_images_medium_train_parallelogramed">Parallelogramed</a>
+<br>
+<br>
+<img src="./asset/parallelogramed.png" width="720" height="auto"><br>
+
 
 
